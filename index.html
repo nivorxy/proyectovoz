@@ -2,49 +2,79 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Traductor con Voz</title>
+
 <style>
 body {
     font-family: Arial, sans-serif;
-    background: #111;
-    color: #fff;
+    background: #0f0f0f;
+    color: #ffffff;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
 }
+
 .container {
-    width: 400px;
-    background: #1c1c1c;
+    width: 420px;
+    background: #1b1b1b;
     padding: 20px;
-    border-radius: 10px;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
 }
+
+h2 {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
 textarea, select, button {
     width: 100%;
     margin-top: 10px;
-    padding: 8px;
-    border-radius: 5px;
+    padding: 10px;
+    border-radius: 6px;
     border: none;
+    font-size: 14px;
 }
+
+textarea {
+    resize: none;
+    height: 80px;
+}
+
+select {
+    background: #2a2a2a;
+    color: #fff;
+}
+
 button {
     background: #4CAF50;
-    color: #fff;
+    color: white;
+    font-weight: bold;
     cursor: pointer;
 }
+
+button:hover {
+    background: #43a047;
+}
+
 .output {
     margin-top: 15px;
-    background: #000;
+    background: #0a0a0a;
     padding: 10px;
-    border-radius: 5px;
+    border-radius: 6px;
+    min-height: 40px;
 }
 </style>
 </head>
+
 <body>
 
 <div class="container">
     <h2>Traductor con Voz</h2>
 
-    <textarea id="inputText" placeholder="Escribe tu texto aquí..."></textarea>
+    <textarea id="inputText" placeholder="Escribe el texto aquí..."></textarea>
 
     <select id="lang">
         <option value="en">Inglés</option>
@@ -58,36 +88,82 @@ button {
         <option value="zh-CN">Chino</option>
     </select>
 
+    <select id="voiceGender">
+        <option value="female">Voz femenina</option>
+        <option value="male">Voz masculina</option>
+    </select>
+
     <button onclick="traducir()">Traducir y hablar</button>
 
     <div class="output" id="outputText"></div>
 </div>
 
 <script>
+let voices = [];
+
+// Cargar voces disponibles
+function loadVoices() {
+    voices = window.speechSynthesis.getVoices();
+}
+
+window.speechSynthesis.onvoiceschanged = loadVoices;
+loadVoices();
+
 async function traducir() {
     const text = document.getElementById("inputText").value;
     const lang = document.getElementById("lang").value;
 
-    if (!text) return;
+    if (!text.trim()) return;
 
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${encodeURIComponent(text)}`;
 
-    const res = await fetch(url);
-    const data = await res.json();
+    try {
+        const res = await fetch(url);
+        const data = await res.json();
 
-    const translated = data[0].map(item => item[0]).join("");
+        const translated = data[0].map(item => item[0]).join("");
 
-    document.getElementById("outputText").innerText = translated;
+        document.getElementById("outputText").innerText = translated;
 
-    hablar(translated, lang);
+        hablar(translated, lang);
+    } catch (e) {
+        document.getElementById("outputText").innerText = "Error al traducir.";
+    }
 }
 
 function hablar(texto, idioma) {
-    const speech = new SpeechSynthesisUtterance(texto);
-    speech.lang = idioma;
-    speech.rate = 1;
-    speech.pitch = 1;
-    window.speechSynthesis.speak(speech);
+    const gender = document.getElementById("voiceGender").value;
+
+    const utterance = new SpeechSynthesisUtterance(texto);
+    utterance.lang = idioma;
+
+    const vocesIdioma = voices.filter(v => v.lang.toLowerCase().startsWith(idioma.toLowerCase()));
+
+    let vozSeleccionada = null;
+
+    if (gender === "female") {
+        vozSeleccionada = vocesIdioma.find(v =>
+            /female|woman|zira|susan|lucia|paulina/i.test(v.name)
+        );
+    } else {
+        vozSeleccionada = vocesIdioma.find(v =>
+            /male|man|jorge|juan|alex|google español/i.test(v.name)
+        );
+    }
+
+    if (!vozSeleccionada && vocesIdioma.length > 0) {
+        vozSeleccionada = vocesIdioma[0];
+    }
+
+    if (vozSeleccionada) {
+        utterance.voice = vozSeleccionada;
+    }
+
+    utterance.rate = 1;
+    utterance.pitch = gender === "female" ? 1.1 : 0.9;
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
 }
 </script>
 
