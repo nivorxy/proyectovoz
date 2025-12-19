@@ -88,9 +88,11 @@ button:hover {
         <option value="zh-CN">Chino</option>
     </select>
 
+    <!-- SELECTOR CORREGIDO -->
     <select id="voiceGender">
-        <option value="female">Voz femenina</option>
-        <option value="male">Voz masculina</option>
+        <option value="auto">Voz automática</option>
+        <option value="female">Voz femenina (si disponible)</option>
+        <option value="male">Voz masculina (si disponible)</option>
     </select>
 
     <button onclick="traducir()">Traducir y hablar</button>
@@ -137,20 +139,25 @@ function hablar(texto, idioma) {
     const utterance = new SpeechSynthesisUtterance(texto);
     utterance.lang = idioma;
 
-    const vocesIdioma = voices.filter(v => v.lang.toLowerCase().startsWith(idioma.toLowerCase()));
+    const vocesIdioma = voices.filter(v =>
+        v.lang.toLowerCase().startsWith(idioma.toLowerCase())
+    );
 
     let vozSeleccionada = null;
 
     if (gender === "female") {
         vozSeleccionada = vocesIdioma.find(v =>
-            /female|woman|zira|susan|lucia|paulina/i.test(v.name)
-        );
-    } else {
-        vozSeleccionada = vocesIdioma.find(v =>
-            /male|man|jorge|juan|alex|google español/i.test(v.name)
+            /female|woman|zira|lucia|paulina|susan/i.test(v.name)
         );
     }
 
+    if (gender === "male") {
+        vozSeleccionada = vocesIdioma.find(v =>
+            /male|man|alex|juan|jorge/i.test(v.name)
+        );
+    }
+
+    // AUTOMÁTICO o FALLBACK REAL
     if (!vozSeleccionada && vocesIdioma.length > 0) {
         vozSeleccionada = vocesIdioma[0];
     }
@@ -160,7 +167,9 @@ function hablar(texto, idioma) {
     }
 
     utterance.rate = 1;
-    utterance.pitch = gender === "female" ? 1.1 : 0.9;
+    utterance.pitch =
+        gender === "female" ? 1.1 :
+        gender === "male" ? 0.9 : 1;
 
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
